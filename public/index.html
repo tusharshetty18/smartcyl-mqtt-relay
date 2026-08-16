@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SmartCyl Relay — Test Dashboard</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f1216; color: #e6e6e6; padding: 2rem; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  .sub { color: #888; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; max-width: 700px; }
+  .card { background: #1a1e24; border-radius: 10px; padding: 1rem 1.25rem; border: 1px solid #262b33; }
+  .label { font-size: 0.8rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+  .value { font-size: 1.8rem; font-weight: 600; margin-top: 0.25rem; }
+  .alert-on { color: #ff5c5c; }
+  .alert-off { color: #4ade80; }
+  #status { margin-top: 1.5rem; font-size: 0.85rem; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dot-green { background: #4ade80; }
+  .dot-red { background: #ff5c5c; }
+</style>
+</head>
+<body>
+  <h1>SmartCyl — Relay Test Dashboard</h1>
+  <div class="sub">Live readings pushed over WebSocket from the cloud relay. This confirms the relay pipeline works before wiring it into the real dashboard.</div>
+
+  <div class="grid">
+    <div class="card"><div class="label">Gas (ADC)</div><div class="value" id="gas">—</div></div>
+    <div class="card"><div class="label">Flame</div><div class="value" id="flame">—</div></div>
+    <div class="card"><div class="label">Weight (kg)</div><div class="value" id="weight">—</div></div>
+    <div class="card"><div class="label">Alert</div><div class="value" id="alert">—</div></div>
+  </div>
+
+  <div id="status"><span class="dot dot-red" id="dot"></span><span id="statusText">Connecting...</span></div>
+
+  <script>
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);
+
+    const el = {
+      gas: document.getElementById('gas'),
+      flame: document.getElementById('flame'),
+      weight: document.getElementById('weight'),
+      alert: document.getElementById('alert'),
+      dot: document.getElementById('dot'),
+      statusText: document.getElementById('statusText'),
+    };
+
+    ws.onopen = () => {
+      el.dot.className = 'dot dot-green';
+      el.statusText.textContent = 'Connected — waiting for data';
+    };
+
+    ws.onclose = () => {
+      el.dot.className = 'dot dot-red';
+      el.statusText.textContent = 'Disconnected';
+    };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'reading') {
+        const r = msg.data;
+        el.gas.textContent = r.gas ?? '—';
+        el.flame.textContent = r.flame ?? '—';
+        el.weight.textContent = r.weight ?? '—';
+        el.alert.textContent = r.alert ? 'ALERT' : 'Safe';
+        el.alert.className = 'value ' + (r.alert ? 'alert-on' : 'alert-off');
+        el.statusText.textContent = 'Last update: ' + new Date(r.timestamp).toLocaleTimeString();
+      }
+    };
+  </script>
+</body>
+</html>
