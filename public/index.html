@@ -2,103 +2,387 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SmartCyl Monitor</title>
-<link rel="stylesheet" href="style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>
+  :root {
+    box-sizing: border-box;
+  }
+  * { box-sizing: inherit; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    margin: 0;
+    padding: 0;
+  }
+
+  nav {
+    background: #16213e;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    color: #e94560;
+    font-weight: bold;
+    font-size: 1em;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 8px 14px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  nav button.active {
+    background: rgba(233, 69, 96, 0.15);
+    text-decoration: underline;
+  }
+
+  .container {
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  .card {
+    background: #16213e;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 12px 0;
+    word-wrap: break-word;
+  }
+
+  h2 {
+    color: #e94560;
+    font-size: clamp(1.1rem, 4vw, 1.4rem);
+    margin-top: 0;
+  }
+
+  .alert-red, .alert-yellow, .alert-green {
+    border-radius: 8px;
+    padding: 10px;
+    margin: 8px 0;
+    font-size: clamp(0.85rem, 3vw, 1rem);
+  }
+  .alert-red { background: #c0392b; }
+  .alert-yellow { background: #d4a017; color: #000; }
+  .alert-green { background: #1e8449; }
+
+  .gauge-wrap {
+    background: #0f3460;
+    border-radius: 8px;
+    height: 28px;
+    width: 100%;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+
+  .gauge-fill {
+    height: 28px;
+    border-radius: 8px;
+    text-align: right;
+    padding-right: 8px;
+    line-height: 28px;
+    font-weight: bold;
+    transition: width 0.4s;
+    white-space: nowrap;
+    font-size: 0.9em;
+  }
+
+  ul { padding-left: 18px; margin: 8px 0; }
+  li { margin: 4px 0; font-size: 0.9em; word-wrap: break-word; }
+
+  .conn-status {
+    font-size: 0.85em;
+    text-align: center;
+    padding: 10px;
+    color: #999;
+    position: sticky;
+    bottom: 0;
+    background: #1a1a2e;
+  }
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  .dot-green { background: #2ecc71; }
+  .dot-red { background: #e74c3c; }
+
+  /* ---- Small phone screens ---- */
+  @media (max-width: 480px) {
+    .container { padding: 10px; }
+    nav { padding: 8px 4px; gap: 2px; }
+    nav button { padding: 8px 10px; font-size: 0.9em; }
+    .card { padding: 12px; margin: 8px 0; }
+  }
+
+  /* ---- Very narrow screens: stack nav labels tighter ---- */
+  @media (max-width: 340px) {
+    nav button { padding: 6px 8px; font-size: 0.8em; }
+  }
+</style>
 </head>
 <body>
-  <nav>
-    <a href="index.html" class="active">Overview</a>
-    <a href="gas.html">Gas</a>
-    <a href="fire.html">Fire</a>
-    <a href="weight.html">Weight</a>
-  </nav>
+  <div id="root"></div>
 
-  <div class="container">
-    <h2>SmartCyl — Overview</h2>
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef, useCallback } = React;
 
-    <div id="alerts"></div>
+    const LOW_WEIGHT_KG = 1.0;
+    const WEIGHT_FULL_SCALE_KG = 5.0;
+    const GAS_FULL_SCALE = 4095;
 
-    <div class="card">
-      <b>Gas Level (Raw ADC):</b> <span id="gasValue">—</span>
-      <div class="gauge-wrap"><div class="gauge-fill" id="gasGauge" style="width:0%;background:#2ecc71">0%</div></div>
-    </div>
+    function formatTime(iso) {
+      if (!iso) return '--:--:--';
+      return new Date(iso).toLocaleTimeString();
+    }
 
-    <div class="card">
-      <b>Flame Status:</b> <span id="flameStatus">—</span>
-    </div>
+    function AlertBanner({ type, children }) {
+      const cls = type === 'red' ? 'alert-red' : type === 'yellow' ? 'alert-yellow' : 'alert-green';
+      return <div className={cls}>{children}</div>;
+    }
 
-    <div class="card">
-      <b>Cylinder Weight:</b> <span id="weightValue">—</span> kg
-      <div class="gauge-wrap"><div class="gauge-fill" id="weightGauge" style="width:0%;background:#2ecc71">0%</div></div>
-    </div>
+    function Gauge({ percent, danger, warn, label }) {
+      const bg = danger ? '#e74c3c' : warn ? '#f39c12' : '#2ecc71';
+      return (
+        <div className="gauge-wrap">
+          <div className="gauge-fill" style={{ width: percent + '%', background: bg }}>
+            {label ?? percent + '%'}
+          </div>
+        </div>
+      );
+    }
 
-    <div class="card">
-      <b>Cloud Sync (MQTT via relay):</b> <span id="mqttStatus">—</span>
-    </div>
+    function HistoryList({ items, emptyText }) {
+      if (!items || items.length === 0) {
+        return <ul><li>{emptyText}</li></ul>;
+      }
+      return <ul>{items.map((entry, i) => <li key={i}>{entry}</li>)}</ul>;
+    }
 
-    <div class="card">
-      <h2>Recent Readings</h2>
-      <ul id="weightHistory"></ul>
-    </div>
-  </div>
+    function OverviewPage({ reading, connected, weightHistory }) {
+      const r = reading;
+      const gasDetected = !!r.gasAlert;
+      const flameDetected = !!r.flameAlert;
+      const lowWeight = r.weight < LOW_WEIGHT_KG && r.weight > 0;
+      const gasPercent = Math.max(0, Math.min(100, Math.round((r.gas / GAS_FULL_SCALE) * 100)));
+      const weightPercent = Math.max(0, Math.min(100, Math.round((r.weight / WEIGHT_FULL_SCALE_KG) * 100)));
 
-  <div class="conn-status">
-    <span class="dot dot-red" id="connDot"></span>
-    <span id="connText">Connecting...</span>
-  </div>
+      return (
+        <section>
+          <h2>SmartCyl — Overview</h2>
+          {gasDetected && <AlertBanner type="red">🚨 GAS LEAK DETECTED!</AlertBanner>}
+          {flameDetected && <AlertBanner type="red">🔥 FLAME DETECTED!</AlertBanner>}
+          {lowWeight && <AlertBanner type="yellow">⚠️ LOW GAS CYLINDER — {r.weight.toFixed(2)} kg remaining</AlertBanner>}
 
-  <script src="smartcyl.js"></script>
-  <script>
-    const GAS_THRESHOLD = 4000; // matches SmartCyl.ino's #define GAS_THRESHOLD
+          <div className="card">
+            <b>Gas Level (Raw ADC):</b> {r.gas ?? '—'}
+            <Gauge percent={gasPercent} danger={gasDetected} />
+          </div>
 
-    SmartCyl.onUpdate((state) => {
-      const r = state.latest;
+          <div className="card"><b>Flame Status:</b> {flameDetected ? '🔥 FLAME' : '✅ Clear'}</div>
 
-      // Connection dot
-      document.getElementById('connDot').className = 'dot ' + (state.connected ? 'dot-green' : 'dot-red');
-      document.getElementById('connText').textContent = state.connected ? 'Live' : 'Reconnecting...';
+          <div className="card">
+            <b>Cylinder Weight:</b> {r.weight != null ? r.weight.toFixed(2) : '—'} kg
+            <Gauge percent={weightPercent} warn={lowWeight} />
+          </div>
 
-      if (r.timestamp === null) return;
+          <div className="card"><b>Cloud Sync (MQTT via relay):</b> {connected ? '🟢 Connected' : '🔴 Disconnected'}</div>
 
-      const gasDetected = r.gas > GAS_THRESHOLD;
-      const flameDetected = !!r.flame;
-      const lowWeight = r.weight < 1.0 && r.weight > 0;
+          <div className="card">
+            <h2>Recent Readings</h2>
+            <HistoryList items={weightHistory} emptyText="No readings yet" />
+          </div>
+        </section>
+      );
+    }
 
-      // Alert banners
-      let alertsHtml = '';
-      if (gasDetected) alertsHtml += `<div class="alert-red">🚨 GAS LEAK DETECTED!</div>`;
-      if (flameDetected) alertsHtml += `<div class="alert-red">🔥 FLAME DETECTED!</div>`;
-      if (lowWeight) alertsHtml += `<div class="alert-yellow">⚠️ LOW GAS CYLINDER — ${r.weight.toFixed(2)} kg remaining</div>`;
-      document.getElementById('alerts').innerHTML = alertsHtml;
+    function GasPage({ reading, gasHistory }) {
+      const r = reading;
+      const gasDetected = !!r.gasAlert;
+      const gasPercent = Math.max(0, Math.min(100, Math.round((r.gas / GAS_FULL_SCALE) * 100)));
 
-      // Gas gauge
-      const gasPercent = Math.max(0, Math.min(100, Math.round((r.gas / 4095) * 100)));
-      const gasGauge = document.getElementById('gasGauge');
-      gasGauge.style.width = gasPercent + '%';
-      gasGauge.style.background = gasDetected ? '#e74c3c' : '#2ecc71';
-      gasGauge.textContent = gasPercent + '%';
-      document.getElementById('gasValue').textContent = r.gas;
+      return (
+        <section>
+          <h2>Gas Sensor</h2>
+          {gasDetected
+            ? <AlertBanner type="red">🚨 GAS LEAK DETECTED!</AlertBanner>
+            : <AlertBanner type="green">✅ Gas level normal</AlertBanner>}
+          <div className="card">
+            <b>Raw ADC Value:</b> {r.gas ?? '—'} / {GAS_FULL_SCALE} (Threshold: 4000)
+            <Gauge percent={gasPercent} danger={gasDetected} />
+          </div>
+          <div className="card">
+            <h2>Gas Alert History</h2>
+            <HistoryList items={gasHistory} emptyText="No alerts yet" />
+          </div>
+        </section>
+      );
+    }
 
-      // Flame status
-      document.getElementById('flameStatus').textContent = flameDetected ? '🔥 FLAME' : '✅ Clear';
+    function FirePage({ reading, flameHistory }) {
+      const flameDetected = !!reading.flameAlert;
+      return (
+        <section>
+          <h2>Flame Sensor</h2>
+          {flameDetected
+            ? <AlertBanner type="red">🔥 FLAME DETECTED!</AlertBanner>
+            : <AlertBanner type="green">✅ No flame detected</AlertBanner>}
+          <div className="card"><b>Status:</b> {flameDetected ? 'FLAME' : 'Clear'}</div>
+          <div className="card">
+            <h2>Fire Alert History</h2>
+            <HistoryList items={flameHistory} emptyText="No alerts yet" />
+          </div>
+        </section>
+      );
+    }
 
-      // Weight gauge (assuming 5kg as a full-scale reference, matching original)
-      const weightPercent = Math.max(0, Math.min(100, Math.round((r.weight / 5.0) * 100)));
-      const weightGauge = document.getElementById('weightGauge');
-      weightGauge.style.width = weightPercent + '%';
-      weightGauge.style.background = lowWeight ? '#f39c12' : '#2ecc71';
-      weightGauge.textContent = weightPercent + '%';
-      document.getElementById('weightValue').textContent = r.weight.toFixed(2);
+    function WeightPage({ reading, weightHistory }) {
+      const r = reading;
+      const lowWeight = r.weight < LOW_WEIGHT_KG && r.weight > 0;
+      const weightPercent = Math.max(0, Math.min(100, Math.round((r.weight / WEIGHT_FULL_SCALE_KG) * 100)));
 
-      // MQTT/cloud sync status — if we're receiving live messages at all, the pipeline is up
-      document.getElementById('mqttStatus').textContent = state.connected ? '🟢 Connected' : '🔴 Disconnected';
+      return (
+        <section>
+          <h2>Cylinder Weight</h2>
+          {lowWeight && <AlertBanner type="yellow">⚠️ LOW GAS — Refill Soon!</AlertBanner>}
+          <div className="card">
+            <b>Current Weight:</b> {r.weight != null ? r.weight.toFixed(2) : '—'} kg
+            <Gauge percent={weightPercent} warn={lowWeight} />
+          </div>
+          <div className="card">
+            <h2>Weight History</h2>
+            <HistoryList items={weightHistory} emptyText="No readings yet" />
+          </div>
+        </section>
+      );
+    }
 
-      // Recent readings list
-      document.getElementById('weightHistory').innerHTML =
-        state.weightHistory.map(e => `<li>${e}</li>`).join('') || '<li>No readings yet</li>';
-    });
+    function App() {
+      const [page, setPage] = useState('overview');
+      const [connected, setConnected] = useState(false);
+      const [reading, setReading] = useState({
+        gas: null, flame: null, weight: null, alert: false,
+        gasAlert: false, flameAlert: false, timestamp: null,
+      });
+      const [gasHistory, setGasHistory] = useState([]);
+      const [flameHistory, setFlameHistory] = useState([]);
+      const [weightHistory, setWeightHistory] = useState([]);
 
-    SmartCyl.init();
+      // Keep the previous reading in a ref so the WS handler can detect
+      // rising edges without stale-closure issues.
+      const prevRef = useRef(reading);
+
+      const applyReading = useCallback((next) => {
+        const prev = prevRef.current;
+
+        if (next.flameAlert && !prev.flameAlert) {
+          setFlameHistory((h) => [`[${formatTime(next.timestamp)}] Flame detected`, ...h].slice(0, 5));
+        }
+        if (next.gasAlert && !prev.gasAlert) {
+          setGasHistory((h) => [`[${formatTime(next.timestamp)}] Gas=${next.gas}`, ...h].slice(0, 5));
+        }
+        setWeightHistory((h) => [`[${formatTime(next.timestamp)}] ${Number(next.weight ?? 0).toFixed(2)} kg`, ...h].slice(0, 5));
+
+        prevRef.current = next;
+        setReading(next);
+      }, []);
+
+      useEffect(() => {
+        let ws;
+        let retryTimer;
+        let cancelled = false;
+
+        function connect() {
+          const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);
+
+          ws.onopen = () => { if (!cancelled) setConnected(true); };
+          ws.onclose = () => {
+            if (cancelled) return;
+            setConnected(false);
+            retryTimer = setTimeout(connect, 3000);
+          };
+          ws.onerror = () => ws.close();
+          ws.onmessage = (event) => {
+            try {
+              const msg = JSON.parse(event.data);
+              if (msg.type === 'reading') applyReading(msg.data);
+            } catch (e) { console.error('Bad WS message', e); }
+          };
+        }
+
+        fetch('/api/status')
+          .then((r) => r.json())
+          .then((data) => { if (!cancelled && data && data.timestamp) applyReading(data); })
+          .catch((e) => console.error('Initial status fetch failed', e));
+
+        connect();
+
+        return () => {
+          cancelled = true;
+          clearTimeout(retryTimer);
+          if (ws) ws.close();
+        };
+      }, [applyReading]);
+
+      const pages = {
+        overview: <OverviewPage reading={reading} connected={connected} weightHistory={weightHistory} />,
+        gas: <GasPage reading={reading} gasHistory={gasHistory} />,
+        fire: <FirePage reading={reading} flameHistory={flameHistory} />,
+        weight: <WeightPage reading={reading} weightHistory={weightHistory} />,
+      };
+
+      const navItems = [
+        ['overview', 'Overview'],
+        ['gas', 'Gas'],
+        ['fire', 'Fire'],
+        ['weight', 'Weight'],
+      ];
+
+      return (
+        <React.Fragment>
+          <nav>
+            {navItems.map(([key, label]) => (
+              <button
+                key={key}
+                className={page === key ? 'active' : ''}
+                onClick={() => setPage(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="container">
+            {pages[page]}
+          </div>
+          <div className="conn-status">
+            <span className={'dot ' + (connected ? 'dot-green' : 'dot-red')}></span>
+            <span>{connected ? 'Live' : 'Reconnecting...'}</span>
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>

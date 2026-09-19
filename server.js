@@ -32,6 +32,12 @@ const MQTT_TOPIC = process.env.MQTT_TOPIC || 'smartcyl/sensors';
 const HISTORY_BUFFER_SIZE = parseInt(process.env.HISTORY_BUFFER_SIZE || '200', 10);
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim());
 
+// How long an alert stays visible on the dashboard after the last time
+// the ESP32 reported it as true — this is now the single place that
+// controls display duration. Change this value (no firmware re-flash
+// needed) to tune how long an alert banner lingers.
+const ALERT_HOLD_MS = parseInt(process.env.ALERT_HOLD_MS || '15000', 10);
+
 if (!MQTT_BROKER_URL) {
   console.error('[FATAL] MQTT_BROKER_URL is not set. Copy .env.example to .env and fill it in.');
   process.exit(1);
@@ -44,11 +50,21 @@ let latestReading = {
   flame: null,
   weight: null,
   alert: false,
+  gasAlert: false,
+  flameAlert: false,
   timestamp: null,
 };
 
 // Rolling buffer of recent readings for the /api/history endpoint / graphs.
 const history = [];
+
+// Server-side alert hold — the moment (epoch ms) until which each alert
+// should still read as "true" on the dashboard, regardless of what the
+// most recent raw reading says. Set fresh every time a true alert is
+// received; a background tick (below) expires it and pushes an update
+// once the hold window passes with no further true readings.
+let gasAlertUntil = 0;
+let flameAlertUntil = 0;
 
 function pushHistory(reading) {
   history.push(reading);
@@ -155,6 +171,8 @@ function parsePayload(topic, payloadBuffer) {
       flame: parsed.flame ?? latestReading.flame,
       weight: parsed.weight ?? latestReading.weight,
       alert: parsed.alert ?? latestReading.alert,
+      gasAlert: parsed.gasAlert ?? latestReading.gasAlert,
+      flameAlert: parsed.flameAlert ?? latestReading.flameAlert,
       timestamp: new Date().toISOString(),
     };
   } catch (e) {
@@ -180,12 +198,53 @@ function parsePayload(topic, payloadBuffer) {
 }
 
 mqttClient.on('message', (topic, payloadBuffer) => {
-  const reading = parsePayload(topic, payloadBuffer);
+  const parsed = parsePayload(topic, payloadBuffer);
+  const now = Date.now();
+
+  // A true alert (from the firmware's raw instantaneous state) extends
+  // the hold window. This is the ONLY place display duration is decided —
+  // one message getting through is enough to guarantee the full hold,
+  // regardless of what the ESP32 manages to send afterward.
+  if (parsed.gasAlert) gasAlertUntil = now + ALERT_HOLD_MS;
+  if (parsed.flameAlert) flameAlertUntil = now + ALERT_HOLD_MS;
+
+  const reading = {
+    ...parsed,
+    gasAlert: parsed.gasAlert || now < gasAlertUntil,
+    flameAlert: parsed.flameAlert || now < flameAlertUntil,
+  };
+  reading.alert = reading.gasAlert || reading.flameAlert;
+
   latestReading = reading;
   pushHistory(reading);
   broadcast(reading);
   console.log('[MQTT] message on', topic, '->', reading);
 });
+
+// Expire the alert hold even when no new MQTT message arrives — without
+// this, a held alert would just stay "true" forever once its window
+// passes, since nothing would ever tell connected dashboards it cleared.
+setInterval(() => {
+  const now = Date.now();
+  const gasStillHeld = now < gasAlertUntil;
+  const flameStillHeld = now < flameAlertUntil;
+
+  const shouldClearGas = latestReading.gasAlert && !gasStillHeld;
+  const shouldClearFlame = latestReading.flameAlert && !flameStillHeld;
+
+  if (shouldClearGas || shouldClearFlame) {
+    latestReading = {
+      ...latestReading,
+      gasAlert: gasStillHeld,
+      flameAlert: flameStillHeld,
+      alert: gasStillHeld || flameStillHeld,
+      timestamp: new Date().toISOString(),
+    };
+    pushHistory(latestReading);
+    broadcast(latestReading);
+    console.log('[HOLD] alert window expired ->', latestReading);
+  }
+}, 1000);
 
 // ---------- Start server ----------
 server.listen(PORT, () => {
