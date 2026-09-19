@@ -4,116 +4,228 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SmartCyl Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 <style>
   :root {
+    --bg: #0f1220;
+    --bg-grad-1: #0f1220;
+    --bg-grad-2: #1a1f38;
+    --card: #171b2e;
+    --card-border: #262b45;
+    --accent: #ff4d6d;
+    --accent-glow: rgba(255, 77, 109, 0.35);
+    --text: #eef0f8;
+    --text-dim: #8b90a8;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --yellow: #f4b740;
     box-sizing: border-box;
   }
   * { box-sizing: inherit; }
 
   body {
-    font-family: Arial, sans-serif;
-    background: #1a1a2e;
-    color: #eee;
+    font-family: 'Inter', Arial, sans-serif;
+    background: radial-gradient(ellipse at top, var(--bg-grad-2), var(--bg-grad-1) 60%);
+    color: var(--text);
     margin: 0;
     padding: 0;
+    min-height: 100vh;
+  }
+
+  header.hero {
+    text-align: center;
+    padding: 28px 16px 8px;
+  }
+  header.hero h1 {
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ff4d6d, #ff8a5c);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header.hero p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin: 4px 0 0;
   }
 
   nav {
-    background: #16213e;
-    padding: 10px;
     display: flex;
     justify-content: center;
-    gap: 4px;
+    gap: 6px;
     flex-wrap: wrap;
+    padding: 16px;
     position: sticky;
     top: 0;
     z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(15, 18, 32, 0.75);
   }
 
   nav button {
-    background: none;
-    border: none;
-    color: #e94560;
-    font-weight: bold;
-    font-size: 1em;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 0.95em;
     font-family: inherit;
     cursor: pointer;
-    padding: 8px 14px;
-    border-radius: 6px;
+    padding: 9px 18px;
+    border-radius: 999px;
     white-space: nowrap;
+    transition: all 0.2s ease;
   }
-
+  nav button:hover {
+    color: var(--text);
+    border-color: var(--card-border);
+  }
   nav button.active {
-    background: rgba(233, 69, 96, 0.15);
-    text-decoration: underline;
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 0 16px var(--accent-glow);
   }
 
   .container {
     max-width: 900px;
     width: 100%;
     margin: 0 auto;
-    padding: 16px;
+    padding: 8px 16px 32px;
+  }
+
+  .page-fade {
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .card {
-    background: #16213e;
-    border-radius: 10px;
-    padding: 16px;
-    margin: 12px 0;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin: 14px 0;
     word-wrap: break-word;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .card:hover {
+    border-color: #3a3f5c;
   }
 
-  h2 {
-    color: #e94560;
-    font-size: clamp(1.1rem, 4vw, 1.4rem);
-    margin-top: 0;
+  .card-label {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  .alert-red, .alert-yellow, .alert-green {
-    border-radius: 8px;
-    padding: 10px;
-    margin: 8px 0;
-    font-size: clamp(0.85rem, 3vw, 1rem);
+  .card-value {
+    font-size: clamp(1.6rem, 6vw, 2.2rem);
+    font-weight: 700;
+    margin: 4px 0 10px;
+    font-variant-numeric: tabular-nums;
   }
-  .alert-red { background: #c0392b; }
-  .alert-yellow { background: #d4a017; color: #000; }
-  .alert-green { background: #1e8449; }
+
+  h2.section-title {
+    color: var(--text);
+    font-size: clamp(1.1rem, 4vw, 1.35rem);
+    margin: 18px 0 8px;
+    font-weight: 700;
+  }
+
+  .alert-banner {
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 10px 0;
+    font-size: clamp(0.88rem, 3vw, 1rem);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .alert-banner.red {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    color: #ff8a80;
+    animation: pulse 1.6s infinite;
+  }
+  .alert-banner.yellow {
+    background: rgba(244, 183, 64, 0.15);
+    border: 1px solid rgba(244, 183, 64, 0.4);
+    color: #ffd479;
+  }
+  .alert-banner.green {
+    background: rgba(46, 204, 113, 0.12);
+    border: 1px solid rgba(46, 204, 113, 0.35);
+    color: #7be3a3;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+  }
 
   .gauge-wrap {
-    background: #0f3460;
-    border-radius: 8px;
-    height: 28px;
+    background: #0b0d18;
+    border-radius: 999px;
+    height: 22px;
     width: 100%;
-    margin: 8px 0;
+    margin: 6px 0;
     overflow: hidden;
+    border: 1px solid var(--card-border);
   }
-
   .gauge-fill {
-    height: 28px;
-    border-radius: 8px;
+    height: 100%;
+    border-radius: 999px;
     text-align: right;
-    padding-right: 8px;
-    line-height: 28px;
-    font-weight: bold;
-    transition: width 0.4s;
+    padding-right: 10px;
+    line-height: 22px;
+    font-weight: 700;
+    font-size: 0.75em;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.4s ease;
     white-space: nowrap;
-    font-size: 0.9em;
   }
 
-  ul { padding-left: 18px; margin: 8px 0; }
-  li { margin: 4px 0; font-size: 0.9em; word-wrap: break-word; }
+  .sparkline-wrap {
+    margin-top: 8px;
+  }
+  .sparkline-wrap svg {
+    width: 100%;
+    height: 44px;
+    display: block;
+  }
+
+  ul.history-list { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.history-list li {
+    padding: 8px 10px;
+    margin: 4px 0;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    font-size: 0.85em;
+    color: var(--text-dim);
+  }
 
   .conn-status {
-    font-size: 0.85em;
+    font-size: 0.8em;
     text-align: center;
     padding: 10px;
-    color: #999;
+    color: var(--text-dim);
     position: sticky;
     bottom: 0;
-    background: #1a1a2e;
+    background: rgba(15, 18, 32, 0.85);
+    backdrop-filter: blur(8px);
   }
 
   .dot {
@@ -123,20 +235,46 @@
     border-radius: 50%;
     margin-right: 6px;
   }
-  .dot-green { background: #2ecc71; }
-  .dot-red { background: #e74c3c; }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
 
-  /* ---- Small phone screens ---- */
-  @media (max-width: 480px) {
-    .container { padding: 10px; }
-    nav { padding: 8px 4px; gap: 2px; }
-    nav button { padding: 8px 10px; font-size: 0.9em; }
-    .card { padding: 12px; margin: 8px 0; }
+  /* ---- Toast notifications ---- */
+  .toast-stack {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: calc(100vw - 32px);
+  }
+  .toast {
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    font-size: 0.88rem;
+    font-weight: 600;
+    animation: slideIn 0.25s ease;
+    max-width: 320px;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
   }
 
-  /* ---- Very narrow screens: stack nav labels tighter ---- */
+  @media (max-width: 480px) {
+    .container { padding: 4px 10px 24px; }
+    nav { padding: 10px 6px; gap: 3px; }
+    nav button { padding: 8px 12px; font-size: 0.85em; }
+    .card { padding: 14px 16px; margin: 10px 0; }
+    .toast-stack { top: 10px; right: 10px; left: 10px; max-width: none; }
+    .toast { max-width: none; }
+  }
   @media (max-width: 340px) {
-    nav button { padding: 6px 8px; font-size: 0.8em; }
+    nav button { padding: 6px 9px; font-size: 0.78em; }
   }
 </style>
 </head>
@@ -149,23 +287,122 @@
     const LOW_WEIGHT_KG = 1.0;
     const WEIGHT_FULL_SCALE_KG = 5.0;
     const GAS_FULL_SCALE = 4095;
+    const SERIES_MAX_POINTS = 20;
 
     function formatTime(iso) {
       if (!iso) return '--:--:--';
       return new Date(iso).toLocaleTimeString();
     }
 
-    function AlertBanner({ type, children }) {
-      const cls = type === 'red' ? 'alert-red' : type === 'yellow' ? 'alert-yellow' : 'alert-green';
-      return <div className={cls}>{children}</div>;
+    // ---------- Sparkline (tested math, see seriesToPoints) ----------
+    function seriesToPoints(values, width, height, padding = 4) {
+      if (!values || values.length === 0) return '';
+      if (values.length === 1) {
+        const y = height / 2;
+        return `${padding},${y} ${width - padding},${y}`;
+      }
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1;
+      const usableWidth = width - padding * 2;
+      const usableHeight = height - padding * 2;
+      return values.map((v, i) => {
+        const x = padding + (i / (values.length - 1)) * usableWidth;
+        const y = padding + usableHeight - ((v - min) / range) * usableHeight;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
     }
 
-    function Gauge({ percent, danger, warn, label }) {
-      const bg = danger ? '#e74c3c' : warn ? '#f39c12' : '#2ecc71';
+    function Sparkline({ values, color, width = 260, height = 44 }) {
+      const points = seriesToPoints(values, width, height);
+      return (
+        <div className="sparkline-wrap">
+          <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+            {points && (
+              <polyline
+                points={points}
+                fill="none"
+                stroke={color}
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            )}
+          </svg>
+        </div>
+      );
+    }
+
+    // ---------- Animated number (tested interpolation math) ----------
+    function interpolate(from, to, progress) {
+      const clamped = Math.max(0, Math.min(1, progress));
+      return from + (to - from) * clamped;
+    }
+
+    function useAnimatedNumber(target, durationMs = 500) {
+      const [display, setDisplay] = useState(target ?? 0);
+      const fromRef = useRef(target ?? 0);
+      const startRef = useRef(null);
+      const rafRef = useRef(null);
+
+      useEffect(() => {
+        if (target == null) return;
+        fromRef.current = display;
+        startRef.current = null;
+
+        function step(ts) {
+          if (startRef.current === null) startRef.current = ts;
+          const progress = (ts - startRef.current) / durationMs;
+          const value = interpolate(fromRef.current, target, progress);
+          setDisplay(value);
+          if (progress < 1) {
+            rafRef.current = requestAnimationFrame(step);
+          }
+        }
+        rafRef.current = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(rafRef.current);
+        // eslint-disable-next-line
+      }, [target]);
+
+      return display;
+    }
+
+    // ---------- Toasts ----------
+    function useToasts() {
+      const [toasts, setToasts] = useState([]);
+      const idRef = useRef(0);
+
+      const push = useCallback((message) => {
+        const id = idRef.current++;
+        setToasts((t) => [...t, { id, message }]);
+        setTimeout(() => {
+          setToasts((t) => t.filter((x) => x.id !== id));
+        }, 4000);
+      }, []);
+
+      return [toasts, push];
+    }
+
+    function ToastStack({ toasts }) {
+      return (
+        <div className="toast-stack">
+          {toasts.map((t) => (
+            <div className="toast" key={t.id}>{t.message}</div>
+          ))}
+        </div>
+      );
+    }
+
+    function AlertBanner({ type, children }) {
+      return <div className={'alert-banner ' + type}>{children}</div>;
+    }
+
+    function Gauge({ percent, danger, warn }) {
+      const bg = danger ? 'var(--red)' : warn ? 'var(--yellow)' : 'var(--green)';
       return (
         <div className="gauge-wrap">
           <div className="gauge-fill" style={{ width: percent + '%', background: bg }}>
-            {label ?? percent + '%'}
+            {percent}%
           </div>
         </div>
       );
@@ -173,67 +410,78 @@
 
     function HistoryList({ items, emptyText }) {
       if (!items || items.length === 0) {
-        return <ul><li>{emptyText}</li></ul>;
+        return <ul className="history-list"><li>{emptyText}</li></ul>;
       }
-      return <ul>{items.map((entry, i) => <li key={i}>{entry}</li>)}</ul>;
+      return <ul className="history-list">{items.map((entry, i) => <li key={i}>{entry}</li>)}</ul>;
     }
 
-    function OverviewPage({ reading, connected, weightHistory }) {
+    function OverviewPage({ reading, connected, weightHistory, gasSeries, weightSeries }) {
       const r = reading;
       const gasDetected = !!r.gasAlert;
       const flameDetected = !!r.flameAlert;
       const lowWeight = r.weight < LOW_WEIGHT_KG && r.weight > 0;
-      const gasPercent = Math.max(0, Math.min(100, Math.round((r.gas / GAS_FULL_SCALE) * 100)));
-      const weightPercent = Math.max(0, Math.min(100, Math.round((r.weight / WEIGHT_FULL_SCALE_KG) * 100)));
+      const gasPercent = Math.max(0, Math.min(100, Math.round(((r.gas ?? 0) / GAS_FULL_SCALE) * 100)));
+      const weightPercent = Math.max(0, Math.min(100, Math.round(((r.weight ?? 0) / WEIGHT_FULL_SCALE_KG) * 100)));
+      const animGas = Math.round(useAnimatedNumber(r.gas));
+      const animWeight = useAnimatedNumber(r.weight);
 
       return (
-        <section>
-          <h2>SmartCyl — Overview</h2>
+        <section className="page-fade">
           {gasDetected && <AlertBanner type="red">🚨 GAS LEAK DETECTED!</AlertBanner>}
           {flameDetected && <AlertBanner type="red">🔥 FLAME DETECTED!</AlertBanner>}
           {lowWeight && <AlertBanner type="yellow">⚠️ LOW GAS CYLINDER — {r.weight.toFixed(2)} kg remaining</AlertBanner>}
 
           <div className="card">
-            <b>Gas Level (Raw ADC):</b> {r.gas ?? '—'}
+            <div className="card-label">⛽ Gas Level (Raw ADC)</div>
+            <div className="card-value">{r.gas != null ? animGas : '—'}</div>
             <Gauge percent={gasPercent} danger={gasDetected} />
+            <Sparkline values={gasSeries} color={gasDetected ? '#e74c3c' : '#ff8a5c'} />
           </div>
 
-          <div className="card"><b>Flame Status:</b> {flameDetected ? '🔥 FLAME' : '✅ Clear'}</div>
+          <div className="card">
+            <div className="card-label">🔥 Flame Status</div>
+            <div className="card-value">{flameDetected ? 'FLAME' : 'Clear'}</div>
+          </div>
 
           <div className="card">
-            <b>Cylinder Weight:</b> {r.weight != null ? r.weight.toFixed(2) : '—'} kg
+            <div className="card-label">🛢️ Cylinder Weight</div>
+            <div className="card-value">{r.weight != null ? animWeight.toFixed(2) : '—'} kg</div>
             <Gauge percent={weightPercent} warn={lowWeight} />
+            <Sparkline values={weightSeries} color="#5cc8ff" />
           </div>
-
-          <div className="card"><b>Cloud Sync (MQTT via relay):</b> {connected ? '🟢 Connected' : '🔴 Disconnected'}</div>
 
           <div className="card">
-            <h2>Recent Readings</h2>
-            <HistoryList items={weightHistory} emptyText="No readings yet" />
+            <div className="card-label">☁️ Cloud Sync</div>
+            <div className="card-value" style={{ fontSize: '1.1rem' }}>
+              {connected ? '🟢 Connected' : '🔴 Disconnected'}
+            </div>
           </div>
+
+          <h2 className="section-title">Recent Readings</h2>
+          <HistoryList items={weightHistory} emptyText="No readings yet" />
         </section>
       );
     }
 
-    function GasPage({ reading, gasHistory }) {
+    function GasPage({ reading, gasHistory, gasSeries }) {
       const r = reading;
       const gasDetected = !!r.gasAlert;
-      const gasPercent = Math.max(0, Math.min(100, Math.round((r.gas / GAS_FULL_SCALE) * 100)));
+      const gasPercent = Math.max(0, Math.min(100, Math.round(((r.gas ?? 0) / GAS_FULL_SCALE) * 100)));
+      const animGas = Math.round(useAnimatedNumber(r.gas));
 
       return (
-        <section>
-          <h2>Gas Sensor</h2>
+        <section className="page-fade">
           {gasDetected
             ? <AlertBanner type="red">🚨 GAS LEAK DETECTED!</AlertBanner>
             : <AlertBanner type="green">✅ Gas level normal</AlertBanner>}
           <div className="card">
-            <b>Raw ADC Value:</b> {r.gas ?? '—'} / {GAS_FULL_SCALE} (Threshold: 4000)
+            <div className="card-label">⛽ Raw ADC Value</div>
+            <div className="card-value">{r.gas != null ? animGas : '—'} <span style={{ fontSize: '0.5em', color: 'var(--text-dim)' }}>/ {GAS_FULL_SCALE}</span></div>
             <Gauge percent={gasPercent} danger={gasDetected} />
+            <Sparkline values={gasSeries} color={gasDetected ? '#e74c3c' : '#ff8a5c'} />
           </div>
-          <div className="card">
-            <h2>Gas Alert History</h2>
-            <HistoryList items={gasHistory} emptyText="No alerts yet" />
-          </div>
+          <h2 className="section-title">Gas Alert History</h2>
+          <HistoryList items={gasHistory} emptyText="No alerts yet" />
         </section>
       );
     }
@@ -241,37 +489,37 @@
     function FirePage({ reading, flameHistory }) {
       const flameDetected = !!reading.flameAlert;
       return (
-        <section>
-          <h2>Flame Sensor</h2>
+        <section className="page-fade">
           {flameDetected
             ? <AlertBanner type="red">🔥 FLAME DETECTED!</AlertBanner>
             : <AlertBanner type="green">✅ No flame detected</AlertBanner>}
-          <div className="card"><b>Status:</b> {flameDetected ? 'FLAME' : 'Clear'}</div>
           <div className="card">
-            <h2>Fire Alert History</h2>
-            <HistoryList items={flameHistory} emptyText="No alerts yet" />
+            <div className="card-label">🔥 Status</div>
+            <div className="card-value">{flameDetected ? 'FLAME' : 'Clear'}</div>
           </div>
+          <h2 className="section-title">Fire Alert History</h2>
+          <HistoryList items={flameHistory} emptyText="No alerts yet" />
         </section>
       );
     }
 
-    function WeightPage({ reading, weightHistory }) {
+    function WeightPage({ reading, weightHistory, weightSeries }) {
       const r = reading;
       const lowWeight = r.weight < LOW_WEIGHT_KG && r.weight > 0;
-      const weightPercent = Math.max(0, Math.min(100, Math.round((r.weight / WEIGHT_FULL_SCALE_KG) * 100)));
+      const weightPercent = Math.max(0, Math.min(100, Math.round(((r.weight ?? 0) / WEIGHT_FULL_SCALE_KG) * 100)));
+      const animWeight = useAnimatedNumber(r.weight);
 
       return (
-        <section>
-          <h2>Cylinder Weight</h2>
+        <section className="page-fade">
           {lowWeight && <AlertBanner type="yellow">⚠️ LOW GAS — Refill Soon!</AlertBanner>}
           <div className="card">
-            <b>Current Weight:</b> {r.weight != null ? r.weight.toFixed(2) : '—'} kg
+            <div className="card-label">🛢️ Current Weight</div>
+            <div className="card-value">{r.weight != null ? animWeight.toFixed(2) : '—'} kg</div>
             <Gauge percent={weightPercent} warn={lowWeight} />
+            <Sparkline values={weightSeries} color="#5cc8ff" />
           </div>
-          <div className="card">
-            <h2>Weight History</h2>
-            <HistoryList items={weightHistory} emptyText="No readings yet" />
-          </div>
+          <h2 className="section-title">Weight History</h2>
+          <HistoryList items={weightHistory} emptyText="No readings yet" />
         </section>
       );
     }
@@ -286,9 +534,10 @@
       const [gasHistory, setGasHistory] = useState([]);
       const [flameHistory, setFlameHistory] = useState([]);
       const [weightHistory, setWeightHistory] = useState([]);
+      const [gasSeries, setGasSeries] = useState([]);
+      const [weightSeries, setWeightSeries] = useState([]);
+      const [toasts, pushToast] = useToasts();
 
-      // Keep the previous reading in a ref so the WS handler can detect
-      // rising edges without stale-closure issues.
       const prevRef = useRef(reading);
 
       const applyReading = useCallback((next) => {
@@ -296,15 +545,24 @@
 
         if (next.flameAlert && !prev.flameAlert) {
           setFlameHistory((h) => [`[${formatTime(next.timestamp)}] Flame detected`, ...h].slice(0, 5));
+          pushToast('🔥 Flame alert triggered');
         }
         if (next.gasAlert && !prev.gasAlert) {
           setGasHistory((h) => [`[${formatTime(next.timestamp)}] Gas=${next.gas}`, ...h].slice(0, 5));
+          pushToast('🚨 Gas leak alert triggered');
         }
         setWeightHistory((h) => [`[${formatTime(next.timestamp)}] ${Number(next.weight ?? 0).toFixed(2)} kg`, ...h].slice(0, 5));
 
+        if (next.gas != null) {
+          setGasSeries((s) => [...s, next.gas].slice(-SERIES_MAX_POINTS));
+        }
+        if (next.weight != null) {
+          setWeightSeries((s) => [...s, next.weight].slice(-SERIES_MAX_POINTS));
+        }
+
         prevRef.current = next;
         setReading(next);
-      }, []);
+      }, [pushToast]);
 
       useEffect(() => {
         let ws;
@@ -345,10 +603,10 @@
       }, [applyReading]);
 
       const pages = {
-        overview: <OverviewPage reading={reading} connected={connected} weightHistory={weightHistory} />,
-        gas: <GasPage reading={reading} gasHistory={gasHistory} />,
+        overview: <OverviewPage reading={reading} connected={connected} weightHistory={weightHistory} gasSeries={gasSeries} weightSeries={weightSeries} />,
+        gas: <GasPage reading={reading} gasHistory={gasHistory} gasSeries={gasSeries} />,
         fire: <FirePage reading={reading} flameHistory={flameHistory} />,
-        weight: <WeightPage reading={reading} weightHistory={weightHistory} />,
+        weight: <WeightPage reading={reading} weightHistory={weightHistory} weightSeries={weightSeries} />,
       };
 
       const navItems = [
@@ -360,6 +618,11 @@
 
       return (
         <React.Fragment>
+          <ToastStack toasts={toasts} />
+          <header className="hero">
+            <h1>SmartCyl</h1>
+            <p>Real-time gas leak & fire detection</p>
+          </header>
           <nav>
             {navItems.map(([key, label]) => (
               <button
